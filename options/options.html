@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>豆包收藏助手 - 设置</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <h1>豆包收藏助手 设置</h1>
+
+    <!-- AI Provider -->
+    <section class="section">
+      <h2>AI 摘要配置</h2>
+
+      <div class="field">
+        <label>
+          <input type="checkbox" id="aiEnabled" checked>
+          启用 AI 摘要
+        </label>
+      </div>
+
+      <div id="aiFields">
+        <div class="field">
+          <label for="aiProvider">AI 提供商</label>
+          <select id="aiProvider">
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Claude (Anthropic)</option>
+            <option value="doubao">豆包/火山引擎</option>
+            <option value="custom">自定义 (OpenAI兼容)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="aiApiKey">API Key</label>
+          <div class="input-group">
+            <input type="password" id="aiApiKey" placeholder="sk-...">
+            <button type="button" id="toggleApiKey" class="btn-small">显示</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="aiBaseUrl">API Base URL</label>
+          <input type="text" id="aiBaseUrl" placeholder="https://api.openai.com/v1">
+        </div>
+
+        <div class="field">
+          <label for="aiModel">模型名称</label>
+          <input type="text" id="aiModel" placeholder="gpt-4o-mini">
+          <div class="hint" id="modelHint"></div>
+        </div>
+
+        <div class="field">
+          <label for="aiPrompt">摘要 Prompt</label>
+          <textarea id="aiPrompt" rows="4" placeholder="请为以下AI回答生成一个简洁的摘要..."></textarea>
+        </div>
+
+        <div class="field">
+          <button type="button" id="btnTestConnection" class="btn">测试连接</button>
+          <span id="testResult" class="test-result"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Save Config -->
+    <section class="section">
+      <h2>保存配置</h2>
+
+      <div class="field">
+        <label>保存目录</label>
+        <div class="input-group">
+          <input type="text" id="nativePath" placeholder="点击右侧按钮选择保存目录..." readonly>
+          <button type="button" id="btnPickDir" class="btn">选择目录</button>
+        </div>
+        <div class="hint" id="savePathHint">选择一个本地文件夹，笔记将保存到该目录（需安装 Native Helper）</div>
+      </div>
+
+      <div class="field">
+        <label>备用方式（无需 Native Helper）</label>
+        <div class="radio-group">
+          <label>
+            <input type="radio" name="saveMethod" value="native" checked>
+            保存到上方指定目录
+          </label>
+          <label>
+            <input type="radio" name="saveMethod" value="downloads">
+            保存到 Downloads 文件夹
+          </label>
+        </div>
+      </div>
+
+      <div class="field hidden" id="downloadsDirField">
+        <label for="downloadsSubdir">Downloads 子目录名</label>
+        <input type="text" id="downloadsSubdir" placeholder="doubao-collector">
+        <div class="hint">文件将保存到 Downloads/{子目录名}/{文件名}.md</div>
+      </div>
+
+      <div class="field">
+        <label for="filenameTemplate">文件名模板</label>
+        <input type="text" id="filenameTemplate" placeholder="{date}_{title}">
+        <div class="hint">可用变量: {date}, {title}, {timestamp}</div>
+      </div>
+    </section>
+
+    <!-- DOM Selectors (Advanced) -->
+    <section class="section">
+      <h2>高级设置 - DOM 选择器
+        <button type="button" id="toggleAdvanced" class="btn-small">展开</button>
+      </h2>
+      <div id="advancedFields" class="hidden">
+        <div class="hint" style="margin-bottom: 12px;">
+          通常无需修改。仅当扩展无法自动检测豆包的消息元素时，手动指定 CSS 选择器。
+        </div>
+
+        <div class="field">
+          <label for="selChatContainer">聊天容器选择器</label>
+          <input type="text" id="selChatContainer" placeholder="留空=自动检测">
+        </div>
+
+        <div class="field">
+          <label for="selAssistantMsg">AI 回答选择器</label>
+          <input type="text" id="selAssistantMsg" placeholder="留空=自动检测">
+        </div>
+
+        <div class="field">
+          <label for="selUserMsg">用户消息选择器</label>
+          <input type="text" id="selUserMsg" placeholder="留空=自动检测">
+        </div>
+      </div>
+    </section>
+
+    <!-- History Management -->
+    <section class="section">
+      <h2>收藏历史</h2>
+      <div class="field row">
+        <button type="button" id="btnExportHistory" class="btn">导出历史 (JSON)</button>
+        <button type="button" id="btnClearHistory" class="btn btn-danger">清空历史</button>
+      </div>
+      <div class="hint" id="storageInfo"></div>
+    </section>
+
+    <!-- Save / Status -->
+    <div class="footer">
+      <button type="button" id="btnSave" class="btn btn-primary">保存设置</button>
+      <span id="saveStatus" class="save-status"></span>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

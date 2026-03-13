@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "豆包收藏助手",
+  "version": "1.0.0",
+  "description": "一键收藏豆包AI对话为Markdown文件，支持AI摘要总结",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "downloads",
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "https://www.doubao.com/*",
+    "https://doubao.com/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://ark.cn-beijing.volces.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.doubao.com/*",
+        "https://doubao.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

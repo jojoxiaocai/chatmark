@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📋 豆包收藏助手</h1>
+      <div class="stats">
+        <span id="todayCount">今日: 0</span>
+        <span class="divider">|</span>
+        <span id="totalCount">共计: 0</span>
+      </div>
+    </header>
+
+    <div class="actions">
+      <button id="btnOpenDoubao" class="btn btn-primary">打开豆包</button>
+      <button id="btnSettings" class="btn">设置</button>
+    </div>
+
+    <div class="history-section">
+      <h2>最近收藏</h2>
+      <div id="historyList" class="history-list">
+        <div class="empty-state">暂无收藏记录</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
