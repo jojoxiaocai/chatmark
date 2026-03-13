@@ -68,8 +68,8 @@ async function handleSmartSave(data, port) {
     const { question, answerHtml, answerText, conversationTitle, timestamp, url } = data;
     const answer = answerHtml ? htmlToMarkdown(answerHtml) : answerText;
 
-    if (!config.ai.enabled || !config.ai.apiKey) {
-      // No AI → quick save fallback
+    if (!config.ai.apiKey) {
+      // No API Key → quick save fallback
       const result = await handleQuickSave(data);
       port.postMessage({ type: 'done', filename: result.filename, summary: '' });
       return;
@@ -98,15 +98,23 @@ async function handleSmartSave(data, port) {
 
 // === File Saving ===
 async function saveFile(config, filename, content) {
-  if (config.save.method === 'native' && config.save.nativePath) {
+  // 只要配了自定义路径，就优先用 native host
+  if (config.save.nativePath) {
     try {
       await saveViaNativeHost(config.save.nativePath, filename, content);
+      console.log('[ChatMark] Saved via native host to:', config.save.nativePath);
       return;
     } catch (err) {
-      console.warn('[ChatMark] Native host failed:', err.message);
+      console.error('[ChatMark] Native host failed:', err.message);
+      // 如果用户明确选了 native，不要静默回退，让用户知道
+      if (config.save.method === 'native') {
+        throw new Error('保存到自定义目录失败: ' + err.message + '\n请检查 Native Helper 是否安装并重启了 Chrome');
+      }
+      // 否则回退到 downloads
     }
   }
   await saveViaDownloads(config.save.downloadsSubdir, filename, content);
+  console.log('[ChatMark] Saved via downloads');
 }
 
 async function saveViaDownloads(subdir, filename, content) {

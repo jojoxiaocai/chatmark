@@ -5,6 +5,8 @@ const PROVIDER_DEFAULTS = {
   custom: { baseUrl: '', model: '', hint: '填写 OpenAI 兼容的模型名称' },
 };
 
+const DEFAULT_PROMPT = '你是一个知识笔记助手。请用1-2句话提炼以下问答的核心知识点，要求：\n1. 像笔记标题一样简洁，让人一眼就能回忆起这个知识\n2. 突出关键结论或方法，不要泛泛而谈\n3. 用中文回复\n\n用户问题：{question}\n\nAI回答：{answer}';
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadConfig();
   bindEvents();
@@ -16,14 +18,13 @@ async function loadConfig() {
   const config = resp.config;
 
   // AI
-  document.getElementById('aiEnabled').checked = config.ai.enabled;
   document.getElementById('aiProvider').value = config.ai.provider;
   document.getElementById('aiApiKey').value = config.ai.apiKey;
   document.getElementById('aiBaseUrl').value = config.ai.baseUrl;
   document.getElementById('aiModel').value = config.ai.model;
-  document.getElementById('aiPrompt').value = config.ai.summaryPrompt;
+  // Show the saved prompt, or the default if empty/old
+  document.getElementById('aiPrompt').value = config.ai.summaryPrompt || DEFAULT_PROMPT;
   updateProviderHint(config.ai.provider);
-  toggleAiFields(config.ai.enabled);
 
   // Save
   const method = config.save.method || 'native';
@@ -48,11 +49,6 @@ async function loadConfig() {
 }
 
 function bindEvents() {
-  // AI enabled toggle
-  document.getElementById('aiEnabled').addEventListener('change', (e) => {
-    toggleAiFields(e.target.checked);
-  });
-
   // Provider change
   document.getElementById('aiProvider').addEventListener('change', (e) => {
     const provider = e.target.value;
@@ -73,6 +69,11 @@ function bindEvents() {
       input.type = 'password';
       btn.textContent = '显示';
     }
+  });
+
+  // Reset prompt to default
+  document.getElementById('btnResetPrompt').addEventListener('click', () => {
+    document.getElementById('aiPrompt').value = DEFAULT_PROMPT;
   });
 
   // Test connection
@@ -99,27 +100,20 @@ function bindEvents() {
     }
   });
 
-  // Directory picker button
+  // Directory picker
   document.getElementById('btnPickDir').addEventListener('click', pickDirectory);
 
   // Save method toggle
   document.querySelectorAll('input[name="saveMethod"]').forEach(radio => {
-    radio.addEventListener('change', (e) => {
-      toggleSaveMethod(e.target.value);
-    });
+    radio.addEventListener('change', (e) => toggleSaveMethod(e.target.value));
   });
 
   // Advanced toggle
   document.getElementById('toggleAdvanced').addEventListener('click', () => {
     const fields = document.getElementById('advancedFields');
     const btn = document.getElementById('toggleAdvanced');
-    if (fields.classList.contains('hidden')) {
-      fields.classList.remove('hidden');
-      btn.textContent = '收起';
-    } else {
-      fields.classList.add('hidden');
-      btn.textContent = '展开';
-    }
+    fields.classList.toggle('hidden');
+    btn.textContent = fields.classList.contains('hidden') ? '展开' : '收起';
   });
 
   // Save config
@@ -137,27 +131,19 @@ function bindEvents() {
   });
 }
 
-// --- Directory Picker ---
 async function pickDirectory() {
   const hintEl = document.getElementById('savePathHint');
 
-  // Method 1: Try File System Access API (showDirectoryPicker)
   if (window.showDirectoryPicker) {
     try {
       const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-      const path = dirHandle.name;
-      // We can't get the full absolute path from showDirectoryPicker.
-      // Prompt user to enter the full path manually after selecting.
       const fullPath = prompt(
-        `你选择了文件夹: "${path}"\n\n` +
-        `由于浏览器安全限制，无法获取完整路径。\n` +
-        `请输入该文件夹的完整路径（例如 D:/MyNotes/doubao）:`,
+        `你选择了文件夹: "${dirHandle.name}"\n\n由于浏览器限制无法获取完整路径。\n请输入该文件夹的完整路径（如 D:/MyNotes）:`,
         ''
       );
       if (fullPath) {
         document.getElementById('nativePath').value = fullPath;
         updateSavePathHint(fullPath);
-        // Auto switch to native method
         document.querySelector('input[name="saveMethod"][value="native"]').checked = true;
         toggleSaveMethod('native');
       }
@@ -170,8 +156,7 @@ async function pickDirectory() {
     return;
   }
 
-  // Method 2: Fallback - prompt for path directly
-  const path = prompt('请输入保存目录的完整路径（例如 D:/MyNotes/doubao）:');
+  const path = prompt('请输入保存目录的完整路径（如 D:/MyNotes）:');
   if (path) {
     document.getElementById('nativePath').value = path;
     updateSavePathHint(path);
@@ -194,7 +179,7 @@ function updateSavePathHint(path) {
 async function saveConfig() {
   const config = {
     ai: {
-      enabled: document.getElementById('aiEnabled').checked,
+      enabled: true,
       provider: document.getElementById('aiProvider').value,
       apiKey: document.getElementById('aiApiKey').value,
       baseUrl: document.getElementById('aiBaseUrl').value,
@@ -231,12 +216,6 @@ async function exportHistory() {
   a.href = dataUrl;
   a.download = `chatmark-history-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
-}
-
-function toggleAiFields(enabled) {
-  const fields = document.getElementById('aiFields');
-  fields.style.opacity = enabled ? '1' : '0.4';
-  fields.style.pointerEvents = enabled ? 'auto' : 'none';
 }
 
 function toggleSaveMethod(method) {
