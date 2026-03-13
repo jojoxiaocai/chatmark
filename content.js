@@ -255,175 +255,209 @@ function findActionBar(messageEl) {
   return null;
 }
 
-// --- Inject save button into a message element ---
+// --- SVG for smart save button ---
+const ICON_SMART = `<svg class="chatmark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+
+// --- Inject two save buttons into a message element ---
 function injectSaveButton(messageEl) {
   if (messageEl.querySelector('.chatmark-save-btn')) return;
 
-  const btn = document.createElement('button');
-  btn.className = 'chatmark-save-btn';
-  btn.title = '保存到 Markdown';
-  btn.innerHTML = ICON_SAVE;
-  btn.addEventListener('click', (e) => {
+  // Quick save button: 📋
+  const quickBtn = document.createElement('button');
+  quickBtn.className = 'chatmark-save-btn';
+  quickBtn.title = '快速保存';
+  quickBtn.innerHTML = ICON_SAVE;
+  quickBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     e.preventDefault();
-    onSaveClick(btn, messageEl);
+    onQuickSave(quickBtn, messageEl);
   });
 
-  // Try to insert next to the copy button in the action bar
+  // Smart save button: ✨
+  const smartBtn = document.createElement('button');
+  smartBtn.className = 'chatmark-save-btn chatmark-smart-btn';
+  smartBtn.title = 'AI 笔记';
+  smartBtn.innerHTML = ICON_SMART;
+  smartBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onSmartSave(smartBtn, messageEl);
+  });
+
   const actionBar = findActionBar(messageEl);
   if (actionBar) {
-    actionBar.appendChild(btn);
+    actionBar.appendChild(quickBtn);
+    actionBar.appendChild(smartBtn);
   } else {
-    // Fallback: create a floating button at the bottom-right of the message
-    btn.style.position = 'absolute';
-    btn.style.right = '8px';
-    btn.style.bottom = '8px';
-    btn.style.zIndex = '10';
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:absolute;right:8px;bottom:8px;z-index:10;display:flex;gap:2px;';
+    wrapper.appendChild(quickBtn);
+    wrapper.appendChild(smartBtn);
     messageEl.style.position = messageEl.style.position || 'relative';
-    messageEl.appendChild(btn);
+    messageEl.appendChild(wrapper);
   }
 }
 
-// --- Handle save button click ---
-async function onSaveClick(btn, messageEl) {
-  if (btn.classList.contains('saving') || btn.classList.contains('saved')) return;
+// --- Collect message data ---
+function collectMessageData(messageEl) {
+  return {
+    question: findUserQuestion(messageEl),
+    answerHtml: extractMessageHtml(messageEl),
+    answerText: extractTextContent(messageEl),
+    conversationTitle: extractConversationTitle(),
+    timestamp: new Date().toISOString(),
+    url: location.href,
+  };
+}
 
+// --- Quick Save: instant, no AI ---
+async function onQuickSave(btn, messageEl) {
+  if (btn.classList.contains('saving')) return;
   btn.classList.add('saving');
   btn.innerHTML = ICON_LOADING;
 
-  const answerText = extractTextContent(messageEl);
-  const question = findUserQuestion(messageEl);
-
-  // Show progress card immediately
-  showCard({
-    status: 'saving',
-    statusText: '正在记录中...',
-    question: question ? question.slice(0, 100) : '',
-    summary: '',
-    filename: '',
-  });
+  // Show brief card
+  showCardSimple('saving', '正在保存...');
 
   try {
-    const answerHtml = extractMessageHtml(messageEl);
-    const title = extractConversationTitle();
+    const data = collectMessageData(messageEl);
+    const resp = await chrome.runtime.sendMessage({ type: 'QUICK_SAVE', data });
 
-    const response = await chrome.runtime.sendMessage({
-      type: 'SAVE_ANSWER',
-      data: {
-        question,
-        answerHtml,
-        answerText,
-        conversationTitle: title,
-        timestamp: new Date().toISOString(),
-        url: location.href,
-      },
-    });
+    if (resp?.success) {
+      btn.classList.remove('saving');
+      btn.classList.add('saved');
+      btn.innerHTML = ICON_CHECK;
+      showCardSimple('done', '已保存', resp.filename);
+      setTimeout(() => { btn.classList.remove('saved'); btn.innerHTML = ICON_SAVE; }, 2000);
+    } else {
+      throw new Error(resp?.error || '保存失败');
+    }
+  } catch (err) {
+    btn.classList.remove('saving');
+    btn.innerHTML = ICON_SAVE;
+    showCardSimple('error', '保存失败', err.message);
+  }
+}
 
-    if (response && response.success) {
+// --- Smart Save: streaming AI summary ---
+function onSmartSave(btn, messageEl) {
+  if (btn.classList.contains('saving')) return;
+  btn.classList.add('saving');
+  btn.innerHTML = ICON_LOADING;
+
+  const data = collectMessageData(messageEl);
+  const question = data.question;
+
+  // Show streaming card immediately
+  const card = getOrCreateCard();
+  const body = card.querySelector('.chatmark-card-body');
+  body.innerHTML = `
+    <div class="chatmark-card-loading">
+      <div class="spinner"></div>
+      <span>正在生成 AI 笔记...</span>
+      <span class="chatmark-card-status saving">生成中</span>
+    </div>
+    ${question ? `<div class="chatmark-card-summary"><div class="question">${escapeHtml(question.slice(0, 100))}</div></div>` : ''}
+    <div class="chatmark-card-summary"><div class="label">摘要</div><div class="text chatmark-stream-text"></div></div>
+  `;
+  card.classList.add('show');
+
+  const streamText = body.querySelector('.chatmark-stream-text');
+  const port = chrome.runtime.connect({ name: 'smart-save' });
+
+  port.onMessage.addListener((msg) => {
+    if (msg.type === 'chunk') {
+      // Append streaming text
+      streamText.textContent += msg.text;
+      // Auto-scroll
+      const bodyEl = card.querySelector('.chatmark-card-body');
+      bodyEl.scrollTop = bodyEl.scrollHeight;
+    }
+
+    if (msg.type === 'done') {
       btn.classList.remove('saving');
       btn.classList.add('saved');
       btn.innerHTML = ICON_CHECK;
 
-      // Show success card with summary
-      showCard({
-        status: 'done',
-        statusText: '已保存',
-        question: question ? question.slice(0, 100) : '',
-        summary: response.summary || answerText.slice(0, 150) + '...',
-        filename: response.filename || '',
-      });
+      // Update card to done state
+      const loadingEl = body.querySelector('.chatmark-card-loading');
+      if (loadingEl) {
+        loadingEl.innerHTML = `
+          <span style="color:#22c55e;font-size:16px;">✓</span>
+          <span>已保存</span>
+          <span class="chatmark-card-status done">完成</span>
+        `;
+      }
+      if (msg.filename) {
+        const fp = document.createElement('div');
+        fp.className = 'chatmark-card-filepath';
+        fp.textContent = msg.filename;
+        body.appendChild(fp);
+      }
 
-      setTimeout(() => {
-        btn.classList.remove('saved');
-        btn.innerHTML = ICON_SAVE;
-      }, 3000);
-    } else {
-      throw new Error(response?.error || '保存失败');
+      setTimeout(() => { btn.classList.remove('saved'); btn.innerHTML = ICON_SMART; }, 3000);
+      autoHideCard(card, 10000);
+      port.disconnect();
     }
-  } catch (err) {
-    console.error('[ChatMark] Save failed:', err);
-    btn.classList.remove('saving');
-    btn.innerHTML = ICON_SAVE;
 
-    showCard({
-      status: 'error',
-      statusText: '保存失败',
-      question: '',
-      summary: err.message,
-      filename: '',
-    });
-  }
+    if (msg.type === 'error') {
+      btn.classList.remove('saving');
+      btn.innerHTML = ICON_SMART;
+      const loadingEl = body.querySelector('.chatmark-card-loading');
+      if (loadingEl) {
+        loadingEl.innerHTML = `
+          <span style="color:#ef4444;font-size:16px;">✕</span>
+          <span>保存失败</span>
+          <span class="chatmark-card-status error">失败</span>
+        `;
+      }
+      streamText.textContent = msg.message;
+      streamText.style.color = '#fca5a5';
+      autoHideCard(card, 8000);
+      port.disconnect();
+    }
+  });
+
+  port.postMessage({ type: 'SMART_SAVE', data });
 }
 
-// --- Floating Progress Card ---
-function showCard({ status, statusText, question, summary, filename }) {
+// --- Card Helpers ---
+function getOrCreateCard() {
   let card = document.querySelector('.chatmark-card');
-
   if (!card) {
     card = document.createElement('div');
     card.className = 'chatmark-card';
     card.innerHTML = `
       <div class="chatmark-card-header">
-        <div class="title">
-          <span class="icon">📋</span>
-          <span>ChatMark</span>
-        </div>
+        <div class="title"><span class="icon">📋</span><span>ChatMark</span></div>
         <button class="chatmark-card-close">&times;</button>
       </div>
       <div class="chatmark-card-body"></div>
     `;
     document.body.appendChild(card);
-
-    card.querySelector('.chatmark-card-close').addEventListener('click', () => {
-      card.classList.remove('show');
-    });
+    card.querySelector('.chatmark-card-close').addEventListener('click', () => card.classList.remove('show'));
   }
+  clearTimeout(getOrCreateCard._hideTimer);
+  return card;
+}
 
+function showCardSimple(status, text, detail) {
+  const card = getOrCreateCard();
   const body = card.querySelector('.chatmark-card-body');
+  const icons = { saving: '<div class="spinner"></div>', done: '<span style="color:#22c55e;font-size:16px;">✓</span>', error: '<span style="color:#ef4444;font-size:16px;">✕</span>' };
+  const badges = { saving: '<span class="chatmark-card-status saving">保存中</span>', done: '<span class="chatmark-card-status done">完成</span>', error: '<span class="chatmark-card-status error">失败</span>' };
 
-  if (status === 'saving') {
-    body.innerHTML = `
-      <div class="chatmark-card-loading">
-        <div class="spinner"></div>
-        <span>${statusText}</span>
-        <span class="chatmark-card-status saving">记录中</span>
-      </div>
-      ${question ? `<div class="chatmark-card-summary"><div class="question">💬 ${escapeHtml(question)}</div></div>` : ''}
-    `;
-  } else if (status === 'done') {
-    body.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <span style="color:#22c55e;font-size:18px;">✓</span>
-        <span style="font-size:14px;font-weight:500;">${statusText}</span>
-        <span class="chatmark-card-status done">完成</span>
-      </div>
-      ${question ? `<div class="chatmark-card-summary"><div class="question">💬 ${escapeHtml(question)}</div></div>` : ''}
-      ${summary ? `<div class="chatmark-card-summary"><div class="label">摘要</div><div class="text">${escapeHtml(summary)}</div></div>` : ''}
-      ${filename ? `<div class="chatmark-card-filepath">📄 ${escapeHtml(filename)}</div>` : ''}
-    `;
-  } else if (status === 'error') {
-    body.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <span style="color:#ef4444;font-size:18px;">✕</span>
-        <span style="font-size:14px;font-weight:500;">${statusText}</span>
-        <span class="chatmark-card-status error">失败</span>
-      </div>
-      ${summary ? `<div class="chatmark-card-summary"><div class="text" style="color:#fca5a5;">${escapeHtml(summary)}</div></div>` : ''}
-    `;
-  }
+  body.innerHTML = `
+    <div class="chatmark-card-loading">${icons[status]}<span>${escapeHtml(text)}</span>${badges[status]}</div>
+    ${detail ? `<div class="chatmark-card-filepath">${escapeHtml(detail)}</div>` : ''}
+  `;
+  card.classList.add('show');
+  if (status !== 'saving') autoHideCard(card, 4000);
+}
 
-  // Show card with animation
-  requestAnimationFrame(() => {
-    card.classList.add('show');
-  });
-
-  // Auto hide after 8 seconds for success/error
-  if (status !== 'saving') {
-    clearTimeout(showCard._hideTimer);
-    showCard._hideTimer = setTimeout(() => {
-      card.classList.remove('show');
-    }, 8000);
-  }
+function autoHideCard(card, delay) {
+  clearTimeout(getOrCreateCard._hideTimer);
+  getOrCreateCard._hideTimer = setTimeout(() => card.classList.remove('show'), delay);
 }
 
 function escapeHtml(str) {

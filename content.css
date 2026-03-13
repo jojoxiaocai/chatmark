@@ -36,9 +36,23 @@
   color: #22c55e;
 }
 
+.chatmark-smart-btn {
+  color: #a78bfa;
+}
+
+.chatmark-smart-btn:hover {
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.08);
+}
+
 .chatmark-save-btn .chatmark-icon {
   width: 16px;
   height: 16px;
+}
+
+.chatmark-stream-text {
+  white-space: pre-wrap;
+  min-height: 20px;
 }
 
 @keyframes chatmark-spin {
