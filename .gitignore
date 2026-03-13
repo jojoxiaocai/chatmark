@@ -4,4 +4,4 @@ Thumbs.db
 *.crx
 *.pem
 *.zip
-native-host/com.doubao_collector.native_host.json
+native-host/com.chatmark.native_host.json

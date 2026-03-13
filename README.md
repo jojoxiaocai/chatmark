@@ -1,12 +1,14 @@
-# 豆包收藏助手 (Doubao Collector)
+# ChatMark
 
-一键收藏豆包 AI 对话为本地 Markdown 笔记，支持 AI 摘要总结。
+一键收藏 AI 对话为本地 Markdown 笔记，支持 AI 摘要总结。
 
 **收藏到就是学到** —— 把好的 AI 回答变成你的知识库。
 
+> 目前支持 [豆包](https://www.doubao.com)（doubao.com），架构设计支持扩展到其他 AI 对话平台。
+
 ## 功能
 
-- **一键保存** — 豆包 AI 回答旁出现保存按钮，点击即可保存为 Markdown 文件
+- **一键保存** — AI 回答旁出现保存按钮，点击即可保存为 Markdown 文件
 - **AI 摘要** — 可选调用 AI（OpenAI / Claude / 豆包火山引擎 / 自定义）自动生成摘要
 - **自定义保存目录** — 保存到你指定的任意本地文件夹
 - **知识卡片格式** — 简洁的问答结构，适合作为个人知识库
@@ -20,7 +22,7 @@
 1. 下载或 `git clone` 本仓库
 2. 打开 Chrome，访问 `chrome://extensions/`
 3. 开启右上角 **开发者模式**
-4. 点击 **加载已解压的扩展程序**，选择 `doubao-collector` 文件夹
+4. 点击 **加载已解压的扩展程序**，选择项目文件夹
 5. 扩展安装完成，记下扩展 ID（稍后要用）
 
 ### 第二步：安装 Native Helper（保存到自定义目录）
@@ -32,14 +34,14 @@
 **Windows:**
 
 ```bash
-cd doubao-collector/native-host
+cd native-host
 install.bat
 ```
 
 **macOS / Linux:**
 
 ```bash
-cd doubao-collector/native-host
+cd native-host
 chmod +x install.sh
 ./install.sh
 ```
@@ -76,7 +78,7 @@ chmod +x install.sh
 （完整原文）
 
 ---
-来源：豆包 | 2026-03-13 | [原始对话](https://www.doubao.com/chat/xxx)
+来源：AI Chat | 2026-03-13 | [原始对话](https://www.doubao.com/chat/xxx)
 ```
 
 ## 支持的 AI 提供商
@@ -93,10 +95,10 @@ chmod +x install.sh
 ## 项目结构
 
 ```
-doubao-collector/
+chatmark/
 ├── manifest.json           # Chrome 扩展清单 (Manifest V3)
 ├── background.js           # Service Worker
-├── content.js              # 内容脚本（注入豆包页面）
+├── content.js              # 内容脚本（注入 AI 对话页面）
 ├── content.css             # 注入样式
 ├── lib/
 │   ├── ai-providers.js     # AI 多模型抽象层
@@ -112,6 +114,13 @@ doubao-collector/
 └── icons/                  # 扩展图标
 ```
 
+## 支持的 AI 对话平台
+
+| 平台 | 状态 | 备注 |
+|------|------|------|
+| [豆包](https://www.doubao.com) | ✅ 已支持 | 基于 data-testid 选择器 |
+| 其他平台 | 🔜 计划中 | 架构已预留 provider 扩展机制 |
+
 ## 系统要求
 
 - Chrome 88+ / Edge 88+（Manifest V3 支持）
@@ -122,7 +131,7 @@ doubao-collector/
 
 **Q: 保存按钮没有出现？**
 
-豆包页面的 DOM 结构可能会更新。打开 F12 控制台，查看是否有 `[Doubao Collector]` 开头的日志。如果选择器不匹配，在设置页"高级设置"中手动填写 CSS 选择器。
+页面的 DOM 结构可能会更新。打开 F12 控制台，查看是否有 `[ChatMark]` 开头的日志。如果选择器不匹配，在设置页"高级设置"中手动填写 CSS 选择器。
 
 **Q: 保存失败？**
 

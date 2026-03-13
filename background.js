@@ -1,25 +1,25 @@
 /**
- * Doubao Collector - Background Service Worker
+ * ChatMark - Background Service Worker
  * Handles message coordination, AI summarization, file saving, and history.
  */
 
 // Load lib modules (non-module service worker uses importScripts)
 importScripts('./lib/storage.js', './lib/markdown.js', './lib/ai-providers.js');
 
-console.log('[Doubao Collector] Service Worker loaded');
+console.log('[ChatMark] Service Worker loaded');
 
 // --- Message Handler ---
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('[Doubao Collector] Received message:', message.type);
+  console.log('[ChatMark] Received message:', message.type);
 
   if (message.type === 'SAVE_ANSWER') {
     handleSaveAnswer(message.data)
       .then(result => {
-        console.log('[Doubao Collector] Save success:', result.filename);
+        console.log('[ChatMark] Save success:', result.filename);
         sendResponse(result);
       })
       .catch(err => {
-        console.error('[Doubao Collector] Save error:', err);
+        console.error('[ChatMark] Save error:', err);
         sendResponse({ success: false, error: err.message });
       });
     return true;
@@ -57,26 +57,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // --- Main Save Workflow ---
 async function handleSaveAnswer(data) {
-  console.log('[Doubao Collector] handleSaveAnswer start');
+  console.log('[ChatMark] handleSaveAnswer start');
   const config = await getConfig();
   const { question, answerHtml, answerText, conversationTitle, timestamp, url } = data;
 
   // Convert HTML to Markdown
   const answerMarkdown = answerHtml ? htmlToMarkdown(answerHtml) : answerText;
-  console.log('[Doubao Collector] Markdown length:', answerMarkdown.length);
+  console.log('[ChatMark] Markdown length:', answerMarkdown.length);
 
   // AI Summary (optional)
   let summary = null;
   if (config.ai.enabled && config.ai.apiKey) {
     try {
-      console.log('[Doubao Collector] Calling AI summary...');
+      console.log('[ChatMark] Calling AI summary...');
       summary = await callSummary(config.ai, question, answerMarkdown);
-      console.log('[Doubao Collector] AI summary done');
+      console.log('[ChatMark] AI summary done');
     } catch (err) {
-      console.warn('[Doubao Collector] AI summary failed:', err.message);
+      console.warn('[ChatMark] AI summary failed:', err.message);
     }
   } else {
-    console.log('[Doubao Collector] AI summary skipped (disabled or no key)');
+    console.log('[ChatMark] AI summary skipped (disabled or no key)');
   }
 
   // Format Markdown
@@ -91,11 +91,11 @@ async function handleSaveAnswer(data) {
 
   // Generate filename
   const filename = generateFilename(conversationTitle, config.save.filenameTemplate);
-  console.log('[Doubao Collector] Filename:', filename);
+  console.log('[ChatMark] Filename:', filename);
 
   // Save file
   await saveFile(config, filename, markdown);
-  console.log('[Doubao Collector] File saved');
+  console.log('[ChatMark] File saved');
 
   // Record history
   const entry = await addHistoryEntry({
@@ -111,7 +111,7 @@ async function handleSaveAnswer(data) {
 
 // --- File Saving ---
 async function saveFile(config, filename, content) {
-  console.log('[Doubao Collector] saveFile, method:', config.save.method);
+  console.log('[ChatMark] saveFile, method:', config.save.method);
 
   // Try native host first if configured
   if (config.save.method === 'native' && config.save.nativePath) {
@@ -119,7 +119,7 @@ async function saveFile(config, filename, content) {
       await saveViaNativeHost(config.save.nativePath, filename, content);
       return;
     } catch (err) {
-      console.warn('[Doubao Collector] Native host failed:', err.message, '- falling back to downloads');
+      console.warn('[ChatMark] Native host failed:', err.message, '- falling back to downloads');
     }
   }
 
@@ -140,7 +140,7 @@ async function saveViaDownloads(subdir, filename, content) {
   const dataUrl = 'data:text/markdown;base64,' + base64;
 
   const relativePath = subdir ? `${subdir}/${filename}` : filename;
-  console.log('[Doubao Collector] Downloading to:', relativePath);
+  console.log('[ChatMark] Downloading to:', relativePath);
 
   const downloadId = await chrome.downloads.download({
     url: dataUrl,
@@ -149,18 +149,18 @@ async function saveViaDownloads(subdir, filename, content) {
     conflictAction: 'uniquify',
   });
 
-  console.log('[Doubao Collector] Download started, id:', downloadId);
+  console.log('[ChatMark] Download started, id:', downloadId);
   return downloadId;
 }
 
 async function saveViaNativeHost(basePath, filename, content) {
   const filePath = basePath.replace(/[/\\]$/, '') + '/' + filename;
-  console.log('[Doubao Collector] Native host saving to:', filePath);
+  console.log('[ChatMark] Native host saving to:', filePath);
 
   return new Promise((resolve, reject) => {
     try {
       chrome.runtime.sendNativeMessage(
-        'com.doubao_collector.native_host',
+        'com.chatmark.native_host',
         { action: 'save', path: filePath, content },
         (response) => {
           if (chrome.runtime.lastError) {

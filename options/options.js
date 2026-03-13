@@ -229,7 +229,7 @@ async function exportHistory() {
   const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonStr);
   const a = document.createElement('a');
   a.href = dataUrl;
-  a.download = `doubao-collector-history-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `chatmark-history-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
 }
 

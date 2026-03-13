@@ -1,10 +1,10 @@
 #!/bin/bash
-# 豆包收藏助手 - Native Helper 安装程序 (macOS / Linux)
+# ChatMark - Native Helper 安装程序 (macOS / Linux)
 
 set -e
 
 echo "============================================"
-echo "  豆包收藏助手 - Native Helper 安装程序"
+echo "  ChatMark - Native Helper 安装程序"
 echo "============================================"
 echo ""
 
@@ -21,7 +21,7 @@ echo "[OK] Node.js $(node -v) 已安装"
 # Paths
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 HOST_JS="${SCRIPT_DIR}/host.js"
-HOST_NAME="com.doubao_collector.native_host"
+HOST_NAME="com.chatmark.native_host"
 
 # Determine Chrome native messaging hosts directory
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -37,7 +37,7 @@ MANIFEST_PATH="${TARGET_DIR}/${HOST_NAME}.json"
 # Get extension ID
 echo ""
 echo "请打开 chrome://extensions/ 页面，开启"开发者模式"，"
-echo "找到"豆包收藏助手"的扩展 ID（一串字母）。"
+echo "找到"ChatMark"的扩展 ID（一串字母）。"
 echo ""
 read -p "请输入扩展 ID: " EXT_ID
 
@@ -57,7 +57,7 @@ mkdir -p "$TARGET_DIR"
 cat > "$MANIFEST_PATH" << EOF
 {
   "name": "${HOST_NAME}",
-  "description": "Doubao Collector Native Helper",
+  "description": "ChatMark Native Helper",
   "path": "${HOST_JS}",
   "type": "stdio",
   "allowed_origins": [

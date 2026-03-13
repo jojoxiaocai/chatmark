@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 echo ============================================
-echo   豆包收藏助手 - Native Helper 安装程序
+echo   ChatMark - Native Helper 安装程序
 echo ============================================
 echo.
 
@@ -19,12 +19,12 @@ echo [OK] Node.js 已安装
 :: Get current directory
 set SCRIPT_DIR=%~dp0
 set HOST_BAT=%SCRIPT_DIR%run-host.bat
-set MANIFEST_PATH=%SCRIPT_DIR%com.doubao_collector.native_host.json
+set MANIFEST_PATH=%SCRIPT_DIR%com.chatmark.native_host.json
 
 :: Get extension ID from user
 echo.
 echo 请打开 chrome://extensions/ 页面，开启"开发者模式"，
-echo 找到"豆包收藏助手"的扩展 ID（一串字母）。
+echo 找到"ChatMark"的扩展 ID（一串字母）。
 echo.
 set /p EXT_ID="请输入扩展 ID: "
 
@@ -40,8 +40,8 @@ echo 正在创建 Native Host 配置...
 
 (
 echo {
-echo   "name": "com.doubao_collector.native_host",
-echo   "description": "Doubao Collector Native Helper",
+echo   "name": "com.chatmark.native_host",
+echo   "description": "ChatMark Native Helper",
 echo   "path": "%HOST_BAT:\=/%",
 echo   "type": "stdio",
 echo   "allowed_origins": [
@@ -55,7 +55,7 @@ echo [OK] 配置文件已创建: %MANIFEST_PATH%
 :: Register in Windows Registry
 echo 正在注册 Native Messaging Host...
 
-reg add "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.doubao_collector.native_host" /ve /t REG_SZ /d "%MANIFEST_PATH%" /f >nul 2>nul
+reg add "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.chatmark.native_host" /ve /t REG_SZ /d "%MANIFEST_PATH%" /f >nul 2>nul
 
 if %errorlevel% equ 0 (
     echo [OK] 注册成功

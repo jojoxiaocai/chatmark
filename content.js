@@ -1,5 +1,5 @@
 /**
- * Doubao Collector - Content Script
+ * ChatMark - Content Script
  * Injected into doubao.com/chat/* pages.
  * Observes the chat DOM, injects save buttons, and extracts message content.
  *
@@ -12,9 +12,9 @@
  */
 
 // SVG Icons
-const ICON_SAVE = `<svg class="doubao-collector-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`;
-const ICON_CHECK = `<svg class="doubao-collector-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-const ICON_LOADING = `<svg class="doubao-collector-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>`;
+const ICON_SAVE = `<svg class="chatmark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`;
+const ICON_CHECK = `<svg class="chatmark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+const ICON_LOADING = `<svg class="chatmark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>`;
 
 // --- Doubao DOM Selectors (based on real data-testid attributes) ---
 const SELECTORS = {
@@ -40,7 +40,7 @@ async function init() {
       customSelectors = result.config.selectors;
     }
   } catch (e) {
-    console.log('[Doubao Collector] No custom config, using defaults');
+    console.log('[ChatMark] No custom config, using defaults');
   }
 
   // Wait for chat content to appear
@@ -55,7 +55,7 @@ async function init() {
   // Watch for SPA navigation
   watchNavigation();
 
-  console.log('[Doubao Collector] Initialized');
+  console.log('[ChatMark] Initialized');
 }
 
 // --- Wait for chat DOM to be ready ---
@@ -66,20 +66,20 @@ function waitForChat() {
       attempts++;
       const messages = findAssistantMessages();
       if (messages.length > 0) {
-        console.log(`[Doubao Collector] Found ${messages.length} assistant messages`);
+        console.log(`[ChatMark] Found ${messages.length} assistant messages`);
         resolve();
         return;
       }
       // Also check if at least the page structure is loaded
       const unionMessages = document.querySelectorAll(SELECTORS.unionMessage);
       if (unionMessages.length > 0) {
-        console.log(`[Doubao Collector] Found ${unionMessages.length} union messages`);
+        console.log(`[ChatMark] Found ${unionMessages.length} union messages`);
         resolve();
         return;
       }
       if (attempts > 60) {
         // After 30 seconds, start observing anyway
-        console.log('[Doubao Collector] Timeout waiting for messages, starting observer anyway');
+        console.log('[ChatMark] Timeout waiting for messages, starting observer anyway');
         resolve();
         return;
       }
@@ -257,10 +257,10 @@ function findActionBar(messageEl) {
 
 // --- Inject save button into a message element ---
 function injectSaveButton(messageEl) {
-  if (messageEl.querySelector('.doubao-collector-save-btn')) return;
+  if (messageEl.querySelector('.chatmark-save-btn')) return;
 
   const btn = document.createElement('button');
-  btn.className = 'doubao-collector-save-btn';
+  btn.className = 'chatmark-save-btn';
   btn.title = '保存到 Markdown';
   btn.innerHTML = ICON_SAVE;
   btn.addEventListener('click', (e) => {
@@ -341,7 +341,7 @@ async function onSaveClick(btn, messageEl) {
       throw new Error(response?.error || '保存失败');
     }
   } catch (err) {
-    console.error('[Doubao Collector] Save failed:', err);
+    console.error('[ChatMark] Save failed:', err);
     btn.classList.remove('saving');
     btn.innerHTML = ICON_SAVE;
 
@@ -357,58 +357,58 @@ async function onSaveClick(btn, messageEl) {
 
 // --- Floating Progress Card ---
 function showCard({ status, statusText, question, summary, filename }) {
-  let card = document.querySelector('.doubao-collector-card');
+  let card = document.querySelector('.chatmark-card');
 
   if (!card) {
     card = document.createElement('div');
-    card.className = 'doubao-collector-card';
+    card.className = 'chatmark-card';
     card.innerHTML = `
-      <div class="doubao-collector-card-header">
+      <div class="chatmark-card-header">
         <div class="title">
           <span class="icon">📋</span>
-          <span>豆包收藏助手</span>
+          <span>ChatMark</span>
         </div>
-        <button class="doubao-collector-card-close">&times;</button>
+        <button class="chatmark-card-close">&times;</button>
       </div>
-      <div class="doubao-collector-card-body"></div>
+      <div class="chatmark-card-body"></div>
     `;
     document.body.appendChild(card);
 
-    card.querySelector('.doubao-collector-card-close').addEventListener('click', () => {
+    card.querySelector('.chatmark-card-close').addEventListener('click', () => {
       card.classList.remove('show');
     });
   }
 
-  const body = card.querySelector('.doubao-collector-card-body');
+  const body = card.querySelector('.chatmark-card-body');
 
   if (status === 'saving') {
     body.innerHTML = `
-      <div class="doubao-collector-card-loading">
+      <div class="chatmark-card-loading">
         <div class="spinner"></div>
         <span>${statusText}</span>
-        <span class="doubao-collector-card-status saving">记录中</span>
+        <span class="chatmark-card-status saving">记录中</span>
       </div>
-      ${question ? `<div class="doubao-collector-card-summary"><div class="question">💬 ${escapeHtml(question)}</div></div>` : ''}
+      ${question ? `<div class="chatmark-card-summary"><div class="question">💬 ${escapeHtml(question)}</div></div>` : ''}
     `;
   } else if (status === 'done') {
     body.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
         <span style="color:#22c55e;font-size:18px;">✓</span>
         <span style="font-size:14px;font-weight:500;">${statusText}</span>
-        <span class="doubao-collector-card-status done">完成</span>
+        <span class="chatmark-card-status done">完成</span>
       </div>
-      ${question ? `<div class="doubao-collector-card-summary"><div class="question">💬 ${escapeHtml(question)}</div></div>` : ''}
-      ${summary ? `<div class="doubao-collector-card-summary"><div class="label">摘要</div><div class="text">${escapeHtml(summary)}</div></div>` : ''}
-      ${filename ? `<div class="doubao-collector-card-filepath">📄 ${escapeHtml(filename)}</div>` : ''}
+      ${question ? `<div class="chatmark-card-summary"><div class="question">💬 ${escapeHtml(question)}</div></div>` : ''}
+      ${summary ? `<div class="chatmark-card-summary"><div class="label">摘要</div><div class="text">${escapeHtml(summary)}</div></div>` : ''}
+      ${filename ? `<div class="chatmark-card-filepath">📄 ${escapeHtml(filename)}</div>` : ''}
     `;
   } else if (status === 'error') {
     body.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
         <span style="color:#ef4444;font-size:18px;">✕</span>
         <span style="font-size:14px;font-weight:500;">${statusText}</span>
-        <span class="doubao-collector-card-status error">失败</span>
+        <span class="chatmark-card-status error">失败</span>
       </div>
-      ${summary ? `<div class="doubao-collector-card-summary"><div class="text" style="color:#fca5a5;">${escapeHtml(summary)}</div></div>` : ''}
+      ${summary ? `<div class="chatmark-card-summary"><div class="text" style="color:#fca5a5;">${escapeHtml(summary)}</div></div>` : ''}
     `;
   }
 
@@ -435,7 +435,7 @@ function escapeHtml(str) {
 // --- Scan DOM and inject buttons ---
 function scanAndInjectButtons() {
   const messages = findAssistantMessages();
-  console.log(`[Doubao Collector] Scan found ${messages.length} assistant messages`);
+  console.log(`[ChatMark] Scan found ${messages.length} assistant messages`);
   for (const msg of messages) {
     injectSaveButton(msg);
   }
@@ -516,7 +516,7 @@ function watchNavigation() {
 }
 
 function onNavigate() {
-  console.log('[Doubao Collector] Navigation detected, re-scanning...');
+  console.log('[ChatMark] Navigation detected, re-scanning...');
   setTimeout(() => {
     scanAndInjectButtons();
     startObserver();

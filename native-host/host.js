@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Doubao Collector - Native Messaging Host
+ * ChatMark - Native Messaging Host
  * Enables saving Markdown files to any user-chosen directory.
  *
  * Protocol: Chrome Native Messaging
